@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>삼성전자 OPI 주식/현금 비교 계산기</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+        body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            background: #2563eb;
+            cursor: pointer;
+            border-radius: 50%;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-900 min-h-screen">
+    <div class="max-w-6xl mx-auto p-4 md:p-8">
+        <!-- Header -->
+        <header class="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+                <h1 class="text-3xl font-bold text-blue-800 flex items-center gap-2">
+                    <i data-lucide="trending-up" class="w-8 h-8"></i>
+                    삼성전자 OPI 주식/현금 비교 계산기
+                </h1>
+                <p class="text-slate-500 mt-2">1년 보유 시 15% 보너스 주식 혜택을 반영한 세후 수익 시뮬레이션</p>
+            </div>
+            <div class="bg-blue-100 px-4 py-2 rounded-lg border border-blue-200">
+                <span id="taxRateLabel" class="text-blue-800 font-semibold text-sm">적용 세율: 26.4%</span>
+                <span class="text-slate-500 text-xs block">(소득세 + 지방세 포함)</span>
+            </div>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- Controls Side -->
+            <div class="lg:col-span-1 space-y-6 bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                <div class="space-y-4">
+                    <h2 class="font-bold flex items-center gap-2 text-lg border-b pb-2">
+                        <i data-lucide="calculator" class="w-5 h-5 text-blue-600"></i> 입력 정보
+                    </h2>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">OPI 예상 총액 (세전)</label>
+                        <input type="number" id="opiAmount" value="30000000" class="w-full p-2 border rounded-md bg-slate-50 focus:ring-2 focus:ring-blue-500 outline-none">
+                        <p id="opiAmountText" class="text-right text-xs text-slate-400 mt-1">30,000,000원</p>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">주식 선택 비중 (<span id="stockRatioVal">50</span>%)</label>
+                        <input type="range" id="stockRatio" min="0" max="50" step="10" value="50" class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer">
+                        <div class="flex justify-between text-xs text-slate-400">
+                            <span>0% (전액 현금)</span>
+                            <span>50% (최대)</span>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">과세표준 연봉 (세율 결정용)</label>
+                        <input type="number" id="annualSalary" value="80000000" class="w-full p-2 border rounded-md bg-slate-50 focus:ring-2 focus:ring-blue-500 outline-none">
+                        <p class="text-xs text-slate-400 mt-1">※ 세율 구간에 따른 세후 수익이 달라집니다.</p>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4 pt-4 border-t">
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-1">현재 주가 (수령가)</label>
+                            <input type="number" id="currentPrice" value="75000" class="w-full p-2 border rounded-md bg-slate-50">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-1">1년 후 예상 주가</label>
+                            <input type="number" id="expectedPrice" value="85000" class="w-full p-2 border rounded-md bg-blue-50 border-blue-200 text-blue-700 font-bold">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-amber-50 p-4 rounded-xl border border-amber-100 space-y-2">
+                    <h3 class="text-amber-800 font-bold text-sm flex items-center gap-1">
+                        <i data-lucide="info" class="w-4 h-4"></i> 제도 안내 (예상)
+                    </h3>
+                    <ul class="text-xs text-amber-700 space-y-1 list-disc pl-4">
+                        <li>주식 선택 시 1년 보유 조건으로 15% 보너스 주식 지급</li>
+                        <li>배당금 수익은 시뮬레이션에서 제외되었습니다.</li>
+                        <li>본 시뮬레이션은 예상 수치이며 실제 세금 정산과 다를 수 있습니다.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Result Side -->
+            <div class="lg:col-span-2 space-y-6">
+                <!-- Summary Cards -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border-l-4 border-l-slate-400 border border-slate-200">
+                        <p class="text-sm text-slate-500 font-medium">옵션 A: 전액 현금 수령 시 (1년 뒤)</p>
+                        <h3 id="pureCashResult" class="text-2xl font-bold mt-1">22,080,000원</h3>
+                        <p class="text-xs text-slate-400 mt-2">수령 즉시 현금 확보</p>
+                    </div>
+                    <div id="mixedResultCard" class="bg-white p-6 rounded-2xl shadow-sm border-l-4 border border-slate-200">
+                        <p class="text-sm text-slate-500 font-medium">옵션 B: 주식 혼합 수령 시 (1년 뒤)</p>
+                        <h3 id="mixedTotalResult" class="text-2xl font-bold mt-1 text-blue-700">24,000,000원</h3>
+                        <div class="mt-2 flex items-center gap-2">
+                            <span id="diffResult" class="text-sm font-bold"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Main Analysis Chart -->
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                    <h3 class="font-bold text-lg mb-4 flex items-center gap-2">
+                        <i data-lucide="trending-up" class="w-5 h-5 text-green-600"></i> 주가 변동에 따른 1년 후 세후 가치 비교
+                    </h3>
+                    <div class="h-[350px] w-full relative">
+                        <canvas id="mainChart"></canvas>
+                    </div>
+                    <div class="mt-4 p-4 bg-slate-50 rounded-lg flex flex-col md:flex-row justify-between items-center gap-4">
+                        <div class="text-sm">
+                            <span class="text-slate-500">주식 수령 시 예상 수량: </span>
+                            <span id="stockCountLabel" class="font-bold">200.00주</span>
+                            <span id="bonusCountLabel" class="text-blue-600 font-bold ml-1">(+보너스 30.00주)</span>
+                        </div>
+                        <div id="breakEvenLabel" class="bg-blue-600 text-white px-4 py-1 rounded-full text-sm font-bold">
+                            손익분기 주가: 약 65,217원 이하 하락 시 손해
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Insights Section -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                        <h3 class="font-bold text-slate-800 mb-3 flex items-center gap-2">
+                            <i data-lucide="arrow-right-left" class="w-4 h-4 text-blue-500"></i> 주식 선택이 유리한 경우
+                        </h3>
+                        <ul class="text-sm text-slate-600 space-y-2">
+                            <li class="flex items-start gap-2">
+                                <div class="min-w-[18px] h-[18px] rounded-full bg-green-100 text-green-600 flex items-center justify-center text-[10px] mt-0.5 font-bold">1</div>
+                                <span>주가가 1년 뒤 현재보다 13% 이상 하락하지 않을 것으로 예상될 때</span>
+                            </li>
+                            <li class="flex items-start gap-2">
+                                <div class="min-w-[18px] h-[18px] rounded-full bg-green-100 text-green-600 flex items-center justify-center text-[10px] mt-0.5 font-bold">2</div>
+                                <span>금융소득종합과세 대상자가 아니며, 배당 수익을 추가로 누리고 싶을 때</span>
+                            </li>
+                        </ul>
+                    </div>
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                        <h3 class="font-bold text-slate-800 mb-3 flex items-center gap-2">
+                            <i data-lucide="arrow-right-left" class="w-4 h-4 text-red-500"></i> 현금 수령이 유리한 경우
+                        </h3>
+                        <ul class="text-sm text-slate-600 space-y-2">
+                            <li class="flex items-start gap-2">
+                                <div class="min-w-[18px] h-[18px] rounded-full bg-red-100 text-red-600 flex items-center justify-center text-[10px] mt-0.5 font-bold">1</div>
+                                <span>당장 대출 상환이나 큰 지출이 있어 확정된 현금 유동성이 필요할 때</span>
+                            </li>
+                            <li class="flex items-start gap-2">
+                                <div class="min-w-[18px] h-[18px] rounded-full bg-red-100 text-red-600 flex items-center justify-center text-[10px] mt-0.5 font-bold">2</div>
+                                <span>반도체 업황 악화 등으로 주가가 15% 이상 폭락할 가능성이 높다고 판단될 때</span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <footer class="mt-12 text-center text-slate-400 text-xs pb-8">
+            <p>© 2026 Samsung Electronics OPI Strategy Simulator. 본 자료는 참고용이며 투자 결과에 책임을 지지 않습니다.</p>
+        </footer>
+    </div>
+
+    <script>
+        // 초기화
+        lucide.createIcons();
+        let myChart = null;
+
+        const formatKRW = (val) => new Intl.NumberFormat('ko-KR').format(Math.round(val)) + '원';
+
+        const getTaxRate = (salary) => {
+            if (salary <= 14000000) return 0.066;
+            if (salary <= 50000000) return 0.165;
+            if (salary <= 88000000) return 0.264;
+            if (salary <= 150000000) return 0.385;
+            if (salary <= 300000000) return 0.418;
+            if (salary <= 500000000) return 0.462;
+            if (salary <= 1000000000) return 0.495;
+            return 0.495;
+        };
+
+        const calculate = () => {
+            const opiAmount = Number(document.getElementById('opiAmount').value);
+            const stockRatio = Number(document.getElementById('stockRatio').value);
+            const annualSalary = Number(document.getElementById('annualSalary').value);
+            const currentPrice = Number(document.getElementById('currentPrice').value);
+            const expectedPrice = Number(document.getElementById('expectedPrice').value);
+
+            // 레이블 업데이트
+            document.getElementById('stockRatioVal').innerText = stockRatio;
+            document.getElementById('opiAmountText').innerText = formatKRW(opiAmount);
+            
+            const taxRate = getTaxRate(annualSalary);
+            document.getElementById('taxRateLabel').innerText = `적용 세율: ${(taxRate * 100).toFixed(1)}%`;
+
+            // 전액 현금 시나리오
+            const pureCashNet = opiAmount * (1 - taxRate);
+            document.getElementById('pureCashResult').innerText = formatKRW(pureCashNet);
+
+            // 주식 혼합 시나리오
+            const stockPortion = (opiAmount * stockRatio) / 100;
+            const cashPortion = opiAmount - stockPortion;
+
+            const initialStockCount = stockPortion / currentPrice;
+            const bonusStockCount = initialStockCount * 0.15;
+            const totalStockCount = initialStockCount + bonusStockCount;
+
+            // 주식 가치: (전체주식 * 예상가) - (원금세금 + 보너스세금)
+            const totalTaxOnStock = (stockPortion + (bonusStockCount * currentPrice)) * taxRate;
+            const stockValueAfterYear = (totalStockCount * expectedPrice) - totalTaxOnStock;
+            const cashValueNet = cashPortion * (1 - taxRate);
+            const mixedTotalNet = stockValueAfterYear + cashValueNet;
+
+            document.getElementById('mixedTotalResult').innerText = formatKRW(mixedTotalNet);
+            
+            const diff = mixedTotalNet - pureCashNet;
+            const diffEl = document.getElementById('diffResult');
+            const cardEl = document.getElementById('mixedResultCard');
+            
+            if (diff > 0) {
+                diffEl.innerText = `+${formatKRW(diff)} 유리`;
+                diffEl.className = "text-sm font-bold text-green-600";
+                cardEl.classList.add('border-l-green-500');
+                cardEl.classList.remove('border-l-red-500');
+            } else {
+                diffEl.innerText = `${formatKRW(diff)} 불리`;
+                diffEl.className = "text-sm font-bold text-red-600";
+                cardEl.classList.add('border-l-red-500');
+                cardEl.classList.remove('border-l-green-500');
+            }
+
+            document.getElementById('stockCountLabel').innerText = `${initialStockCount.toFixed(2)}주`;
+            document.getElementById('bonusCountLabel').innerText = `(+보너스 ${bonusStockCount.toFixed(2)}주)`;
+            
+            const breakEven = currentPrice * 0.87; // 보수적 근사치
+            document.getElementById('breakEvenLabel').innerText = `손익분기 주가: 약 ${formatKRW(breakEven)} 이하 하락 시 손해`;
+
+            updateChart(currentPrice, opiAmount, stockRatio, taxRate, pureCashNet);
+        };
+
+        const updateChart = (currentPrice, opiAmount, stockRatio, taxRate, pureCashNet) => {
+            const labels = [];
+            const stockData = [];
+            const cashData = [];
+
+            for (let i = -30; i <= 50; i += 5) {
+                const price = currentPrice * (1 + i / 100);
+                const stockPortion = (opiAmount * stockRatio) / 100;
+                const initialStockCount = stockPortion / currentPrice;
+                const bonusStockCount = initialStockCount * 0.15;
+                const totalTax = (stockPortion + (bonusStockCount * currentPrice)) * taxRate;
+                
+                const val = (initialStockCount + bonusStockCount) * price - totalTax + (opiAmount - stockPortion) * (1 - taxRate);
+                
+                labels.push(`${i}%`);
+                stockData.push(Math.round(val / 10000));
+                cashData.push(Math.round(pureCashNet / 10000));
+            }
+
+            if (myChart) myChart.destroy();
+
+            const ctx = document.getElementById('mainChart').getContext('2d');
+            myChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: '주식선택수익 (만원)',
+                            data: stockData,
+                            borderColor: '#3b82f6',
+                            backgroundColor: '#3b82f622',
+                            borderWidth: 3,
+                            fill: true,
+                            tension: 0.3
+                        },
+                        {
+                            label: '전액현금수익 (만원)',
+                            data: cashData,
+                            borderColor: '#94a3b8',
+                            borderWidth: 2,
+                            borderDash: [5, 5],
+                            pointRadius: 0,
+                            fill: false
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                        mode: 'index',
+                        intersect: false,
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: false,
+                            grid: { color: '#f1f5f9' }
+                        },
+                        x: {
+                            grid: { display: false }
+                        }
+                    },
+                    plugins: {
+                        legend: { position: 'top' }
+                    }
+                }
+            });
+        };
+
+        // 이벤트 리스너 등록
+        ['opiAmount', 'stockRatio', 'annualSalary', 'currentPrice', 'expectedPrice'].forEach(id => {
+            document.getElementById(id).addEventListener('input', calculate);
+        });
+
+        // 초기 실행
+        window.onload = calculate;
+    </script>
+</body>
+</html>
+
